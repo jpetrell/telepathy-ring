@@ -331,6 +331,8 @@ modem_call_property_mapper (char const *name)
     return "ofono-state";
   if (!strcmp (name, "StartTime"))
     return "start-time";
+  if (!strcmp (name, "RemoteHeld"))
+    return "onhold";
   if (!strcmp (name, "Information"))
     return NULL;
   if (!strcmp (name, "Icon"))
@@ -355,6 +357,8 @@ modem_call_connect (ModemOface *_self)
 	  G_CALLBACK (on_disconnect_reason), self, NULL);
 
   g_signal_connect (_self, "notify::ofono-state",
+      G_CALLBACK(on_notify_ofono_state), _self);
+  g_signal_connect (_self, "notify::onhold",
       G_CALLBACK(on_notify_ofono_state), _self);
 }
 
@@ -534,9 +538,8 @@ modem_call_class_init (ModemCallClass *klass)
         g_cclosure_marshal_VOID__VOID,
         G_TYPE_NONE, 0);
 
-  /* XXX: not implemented */
   call_signals[SIGNAL_ON_HOLD] =
-    g_signal_new ("on-hold", G_OBJECT_CLASS_TYPE (klass),
+    g_signal_new ("onhold", G_OBJECT_CLASS_TYPE (klass),
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         NULL, NULL,
@@ -744,7 +747,7 @@ on_notify_ofono_state (ModemCall *self,
 
   DEBUG ("enter with \"%s\"", priv->state_str);
 
-  state = modem_call_state_from_ofono_state (priv->state_str);
+  state = priv->onhold ? MODEM_CALL_STATE_HELD : modem_call_state_from_ofono_state (priv->state_str);
   if (state == priv->state)
     return;
 
